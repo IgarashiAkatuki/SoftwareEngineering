@@ -1,4 +1,4 @@
-package com.se.financetracker.common.payments;
+package com.se.financetracker.common.enums;
 
 public enum Payments {
 

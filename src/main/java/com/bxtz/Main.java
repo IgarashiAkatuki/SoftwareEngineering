@@ -28,7 +28,7 @@ public class Main extends Application {
 
         primaryStage.setTitle("Bills Manager");
 
-        Label title = new Label("Bills Manager by Group 43");
+        Label title = new Label("Bills Manager by Group 94");
 
         title.setFont(Font.font("Arial", 24));
         title.setTextFill(Color.WHITE);
@@ -38,7 +38,8 @@ public class Main extends Application {
 
 
         VBox detailsPage = getDetailsPage(primaryStage);
-        VBox analysisPage = new VBox();
+//        VBox analysisPage = new VBox();
+        VBox analysisPage = getAnalysisPage();
 
         Button btnDetails = new Button("Details");
         commons.styleButton1(btnDetails);
@@ -147,9 +148,9 @@ public class Main extends Application {
         table.getColumns().addAll(dateCol, nameCol, detailCol, costCol, typeCol, editCol);
 
         ObservableList<Bill> data = FXCollections.observableArrayList(
-                new Bill("2025-02-01 12:00", "Mei Tuan", "Takeout", "50 RMB", "None"),
-                new Bill("2025-02-02 20:45", "Amazon", "Shopping", "120 RMB", "None"),
-                new Bill("2025-02-06 01:00", "ApplePay", "Online Pay", "648 RMB", "None")
+                new Bill("2025-02-01 12:00", "Mei Tuan", "Takeout", "50 RMB", "Food"),
+                new Bill("2025-02-02 20:45", "Amazon", "Shopping", "120 RMB", "Shopping"),
+                new Bill("2025-02-06 01:00", "ApplePay", "Online Pay", "648 RMB", "Game")
         );
         table.setItems(data);
         commons.updateTotalCost(data, totalCostLabel);
@@ -160,5 +161,24 @@ public class Main extends Application {
         return detailsPage;
     }
 
+    private VBox getAnalysisPage() {
+        // 创建分析页面标题
+        Label analysisTitle = new Label("Bill  Analysis");
+        analysisTitle.setFont(Font.font("Arial", 20));
+        analysisTitle.setStyle("-fx-font-weight: bold;");
+        analysisTitle.setTextFill(Color.BLACK);
+
+        // 创建分析界面，传入账单数据
+        AnalysePage analysePage = new AnalysePage();
+        VBox analysisContent = analysePage.getAnalysisPage(table.getItems());
+
+        // 布局分析页面
+        VBox analysisPageLayout = new VBox(20, analysisTitle, analysisContent);
+        analysisPageLayout.setPadding(new Insets(20));
+        analysisPageLayout.setStyle("-fx-background-color: #f9f9f9;");
+
+        return analysisPageLayout;
+    }
 
 }
+

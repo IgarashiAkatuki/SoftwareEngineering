@@ -1,6 +1,7 @@
 package com.bxtz;
 
 import javafx.application.Platform;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.scene.chart.*;
 import javafx.scene.layout.VBox;
@@ -12,22 +13,33 @@ public class AnalysePage {
 
     private Commons commons = new Commons();
 
+    private BarChart<String, Number> timeBarChart;
+    private PieChart categoryPieChart;
+
     // 创建分析界面
     public VBox getAnalysisPage(ObservableList<Bill> bills) {
         VBox vbox = new VBox(10);
 
         // 1. 按时间的柱状图
-        BarChart<String, Number> timeBarChart = createBarChart(bills);
+        createBarChart(bills);
 
         // 2. 按分类的环状图
-        PieChart categoryPieChart = createPieChart(bills);
+        createPieChart(bills);
 
         vbox.getChildren().addAll(timeBarChart, categoryPieChart);
+
+        bills.addListener((ListChangeListener<Bill>) change -> {
+            System.out.println(change);
+            createBarChart(bills);
+            createPieChart(bills);
+            vbox.getChildren().clear();
+            vbox.getChildren().addAll(timeBarChart, categoryPieChart);
+        });
         return vbox;
     }
 
     // 创建按时间的柱状图
-    private BarChart<String, Number> createBarChart(ObservableList<Bill> bills) {
+    private void createBarChart(ObservableList<Bill> bills) {
         CategoryAxis xAxis = new CategoryAxis();
         NumberAxis yAxis = new NumberAxis();
         xAxis.setLabel("Date");
@@ -57,7 +69,7 @@ public class AnalysePage {
             // 使用 Platform.runLater 确保在渲染完毕后修改颜色
             Platform.runLater(() -> {
                 // 设置柱状图的颜色
-                data.getNode().setStyle("-fx-bar-fill: #47eaff;");  // 设置柱形的颜色，这里使用了番茄红
+                data.getNode().setStyle("-fx-bar-fill: #65c43d;");  // 设置柱形的颜色，这里使用了番茄红
             });
 
             series.getData().add(data);
@@ -65,11 +77,12 @@ public class AnalysePage {
         }
 
         barChart.getData().add(series);
-        return barChart;
+        System.out.println(series);
+        this.timeBarChart = barChart;
     }
 
     // 创建按分类的环状图
-    private PieChart createPieChart(ObservableList<Bill> bills) {
+    private void createPieChart(ObservableList<Bill> bills) {
         PieChart pieChart = new PieChart();
         Map<String, Double> categoryCostMap = new HashMap<>();
 
@@ -87,7 +100,7 @@ public class AnalysePage {
         }
 
         pieChart.setTitle("Total Cost by Category");
-        return pieChart;
+        this.categoryPieChart = pieChart;
     }
 }
 

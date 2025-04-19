@@ -6,6 +6,7 @@ import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
@@ -14,6 +15,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Commons {
     public void updateTotalCost(ObservableList<Bill> bills, Label totalCost) {
@@ -156,7 +159,37 @@ public class Commons {
         TextField nameField = new TextField("");
         TextField detailsField = new TextField("");
         TextField costField = new TextField("");
-        TextField typeField = new TextField("None");
+
+        // Create a ToggleGroup to ensure only one RadioButton can be selected at a time
+        ToggleGroup typeGroup = new ToggleGroup();
+
+        // Create RadioButtons for predefined types
+        RadioButton foodButton = new RadioButton("Food");
+        foodButton.setToggleGroup(typeGroup);
+        RadioButton shoppingButton = new RadioButton("Shopping");
+        shoppingButton.setToggleGroup(typeGroup);
+        RadioButton entertainmentButton = new RadioButton("Entertainment");
+        entertainmentButton.setToggleGroup(typeGroup);
+        RadioButton othersButton = new RadioButton("Others");
+        othersButton.setToggleGroup(typeGroup);
+
+        // Make sure one option is selected by default
+        foodButton.setSelected(true);
+
+        // Style the buttons for consistency
+        styleRadioButton(foodButton);
+        styleRadioButton(shoppingButton);
+        styleRadioButton(entertainmentButton);
+        styleRadioButton(othersButton);
+
+        VBox typeBox = new VBox(10, foodButton, shoppingButton, entertainmentButton, othersButton);
+        typeBox.setSpacing(5);
+
+        // Add consistent width to the labels and buttons
+        setRadioButtonWidth(foodButton);
+        setRadioButtonWidth(shoppingButton);
+        setRadioButtonWidth(entertainmentButton);
+        setRadioButtonWidth(othersButton);
 
         GridPane grid = new GridPane();
         grid.setHgap(10);
@@ -172,7 +205,7 @@ public class Commons {
         grid.add(new Label("Cost:"), 0, 3);
         grid.add(costField, 1, 3);
         grid.add(new Label("Type:"), 0, 4);
-        grid.add(typeField, 1, 4);
+        grid.add(typeBox, 1, 4);
 
         dialog.getDialogPane().setContent(grid);
 
@@ -181,16 +214,37 @@ public class Commons {
 
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == saveButtonType) {
+                String date = dateField.getText();
                 String cost = costField.getText();
-                if (!costField.getText().endsWith("RMB")) {
+
+                // Validate the date format
+                if (!isValidDate(date)) {
+                    showErrorDialog("Format error: Invalid date format. Please use yyyy-MM-dd HH:mm.");
+                    return null;  // Keep the dialog open
+                }
+
+                // Validate the cost format
+                if (!isValidCost(cost)) {
+                    showErrorDialog("Format error: Invalid cost format. Please enter a valid number followed by 'RMB'.");
+                    return null;  // Keep the dialog open
+                }
+
+                // Add " RMB" to the cost if it's not present
+                if (!cost.endsWith("RMB")) {
                     cost = cost + " RMB";
                 }
+
+                // Get the selected type from the radio buttons
+                RadioButton selectedRadioButton = (RadioButton) typeGroup.getSelectedToggle();
+                String type = selectedRadioButton.getText();  // Fix: Getting the text of the selected RadioButton
+
+                // Create a new Bill using the fields
                 return new Bill(
-                        dateField.getText(),
+                        date,
                         nameField.getText(),
                         detailsField.getText(),
                         cost,
-                        typeField.getText()
+                        type  // This is now properly set to the selected type
                 );
             }
             return null;
@@ -206,4 +260,45 @@ public class Commons {
             table.refresh();
         });
     }
+
+    // Method to style the RadioButton for consistency
+    private void styleRadioButton(RadioButton radioButton) {
+        radioButton.setStyle("-fx-background-color: #ecf0f1; -fx-border-color: #bdc3c7; -fx-padding: 5;");
+    }
+
+    // Method to set a uniform width for the RadioButton
+    private void setRadioButtonWidth(RadioButton radioButton) {
+        radioButton.setMinWidth(120);  // Set a fixed width for each button
+    }
+
+    // Method to check if the date is in the correct format
+    private boolean isValidDate(String date) {
+        try {
+            LocalDateTime.parse(date, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    // Method to check if the cost is in the correct format
+    private boolean isValidCost(String cost) {
+        try {
+            // Try parsing the cost as a valid number (double)
+            Double.parseDouble(cost);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    // Method to show an error dialog (keeping the dialog open)
+    private void showErrorDialog(String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Error");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();  // Display error and keep the dialog open for correction
+    }
 }
+

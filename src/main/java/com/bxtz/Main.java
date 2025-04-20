@@ -5,6 +5,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.effect.DropShadow;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
@@ -17,54 +18,102 @@ public class Main extends Application {
     private Label totalCostLabel = new Label("Total Cost: 0 RMB");
     private Commons commons = new Commons();
 
-
     public static void main(String[] args) {
         launch(args);
     }
 
     @Override
     public void start(Stage primaryStage) {
-
-
         primaryStage.setTitle("Bills Manager");
 
         Label title = new Label("Bills Manager by Group 94");
-
         title.setFont(Font.font("Arial", 24));
         title.setTextFill(Color.WHITE);
         HBox header = new HBox(title);
         header.setPadding(new Insets(15));
         header.setStyle("-fx-background-color: #2c3e50;");
 
-
         VBox detailsPage = getDetailsPage(primaryStage);
-//        VBox analysisPage = new VBox();
         VBox analysisPage = getAnalysisPage();
 
         Button btnDetails = new Button("Details");
-        commons.styleButton1(btnDetails);
         Button btnAnalysis = new Button("Analysis");
-        commons.styleButton1(btnAnalysis);
+
+        // Create shadow effect for buttons
+        DropShadow shadow = new DropShadow();
+        shadow.setColor(Color.GRAY);
+        shadow.setOffsetX(4);
+        shadow.setOffsetY(4);
+        shadow.setRadius(8);
+
+        // Apply styles to Details and Analysis buttons to make them distinct
+        btnDetails.setStyle("-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-size: 16px; -fx-border-radius: 5px; -fx-padding: 10px;");
+        btnAnalysis.setStyle("-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-font-size: 16px; -fx-border-radius: 5px; -fx-padding: 10px;");
+
+        // Apply shadow effect on Details button initially
+        btnDetails.setEffect(shadow);
+
+        // Other buttons with default style
+        Button uploadBtn = commons.createImportButton(table, totalCostLabel, primaryStage);
+        Button downloadBtn = commons.createExportButton(table, totalCostLabel, primaryStage);
+        Button analyzeBtn = new Button("AI Type Analysis");
+        Button addBtn = new Button("Add Bill");
+
+        commons.styleButton1(uploadBtn);
+        commons.styleButton2(downloadBtn);
+        commons.styleButton3(analyzeBtn);
+        commons.styleButton2(addBtn);
 
         HBox bar = new HBox(10, btnDetails, btnAnalysis);
         bar.setPadding(new Insets(10));
         bar.setAlignment(Pos.CENTER);
         bar.setStyle("-fx-background-color: #eeeeee;");
 
-
         StackPane contentPane = new StackPane(detailsPage, analysisPage);
         analysisPage.setVisible(false); // 默认只显示详情页
 
+        // Button action to switch between pages
         btnDetails.setOnAction(e -> {
             detailsPage.setVisible(true);
             analysisPage.setVisible(false);
+            btnDetails.setEffect(shadow);  // Add shadow to Details button
+            btnAnalysis.setEffect(null);   // Remove shadow from Analysis button
         });
 
         btnAnalysis.setOnAction(e -> {
             detailsPage.setVisible(false);
             analysisPage.setVisible(true);
+            btnDetails.setEffect(null);    // Remove shadow from Details button
+            btnAnalysis.setEffect(shadow); // Add shadow to Analysis button
         });
 
+        // Button press effect
+        btnDetails.setOnMousePressed(e -> {
+            btnDetails.setEffect(shadow);
+            btnAnalysis.setEffect(null);
+        });
+
+        btnAnalysis.setOnMousePressed(e -> {
+            btnAnalysis.setEffect(shadow);
+            btnDetails.setEffect(null);
+        });
+
+        // Button release effect
+        btnDetails.setOnMouseReleased(e -> {
+            if (detailsPage.isVisible()) {
+                btnDetails.setEffect(shadow);
+            } else {
+                btnDetails.setEffect(null);
+            }
+        });
+
+        btnAnalysis.setOnMouseReleased(e -> {
+            if (analysisPage.isVisible()) {
+                btnAnalysis.setEffect(shadow);
+            } else {
+                btnAnalysis.setEffect(null);
+            }
+        });
 
         VBox root = new VBox(header, bar, contentPane);
         VBox.setVgrow(contentPane, Priority.ALWAYS);
@@ -138,8 +187,7 @@ public class Main extends Application {
                 super.updateItem(item, empty);
                 if (empty) {
                     setGraphic(null);
-                }
-                else {
+                } else {
                     setGraphic(btn);
                 }
             }
@@ -181,4 +229,3 @@ public class Main extends Application {
     }
 
 }
-

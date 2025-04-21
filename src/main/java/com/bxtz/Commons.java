@@ -221,6 +221,7 @@ public class Commons {
                 if (!isValidDate(date)) {
                     showErrorDialog("Format error: Invalid date format. Please use yyyy-MM-dd HH:mm.");
                     return null;  // Keep the dialog open
+                    return null;
                 }
 
                 // Validate the cost format

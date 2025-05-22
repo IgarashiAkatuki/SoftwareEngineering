@@ -35,32 +35,65 @@ public class AnalysePage {
     private MarkdownUtils markdownUtils = new MarkdownUtils();
 
     public VBox getAnalysisPage(ObservableList<Bill> bills) {
-        VBox vbox = new VBox(10);
+        HBox mainLayout = new HBox(10);
+        mainLayout.setPadding(new Insets(10));
+        mainLayout.setStyle("-fx-background-color: #ffffff;");
+
+        // 创建图表容器 VBox
+        VBox chartsBox = new VBox(10);
+        chartsBox.setPrefWidth(600); // 图表区域的宽度
+        chartsBox.setPadding(new Insets(10));
+        chartsBox.setStyle("-fx-background-color: #f9f9f9; -fx-border-color: #ddd; -fx-border-width: 1;");
 
         // 创建图表
         createBarChart(bills);
         createPieChart(bills);
 
-        // 创建AI对话框
-        VBox aiBox = createAIChatBox(bills);
+        chartsBox.getChildren().addAll(timeBarChart, categoryPieChart, new Separator());
 
-        vbox.getChildren().addAll(timeBarChart, categoryPieChart, new Separator(), aiBox);
+        // 创建 AI 聊天界面
+        VBox aiBox = createAIChatBox(bills);
+        aiBox.setPrefWidth(300); // 设置 AI 区域的宽度
+        aiBox.setStyle("-fx-background-color: #f4f4f4; -fx-border-color: #ddd; -fx-border-width: 1;");
+
+        // 将图表和 AI 区域添加到主布局
+        mainLayout.getChildren().addAll(chartsBox, aiBox);
 
         bills.addListener((ListChangeListener<Bill>) change -> {
-            createBarChart(bills);
-            createPieChart(bills);
-            vbox.getChildren().clear();
-            vbox.getChildren().addAll(timeBarChart, categoryPieChart, new Separator(), aiBox);
+            while (change.next()) {
+                if (change.wasAdded() || change.wasRemoved() || change.wasUpdated() || change.wasReplaced()) {
+                    createBarChart(bills);
+                    createPieChart(bills);
+                }
+            }
         });
 
-        return vbox;
+        for (Bill bill : bills) {
+            bill.costProperty().addListener((observable, oldValue, newValue) -> {
+                createBarChart(bills);
+                createPieChart(bills);
+            });
+
+            bill.typeProperty().addListener((observable, oldValue, newValue) -> {
+                createPieChart(bills);
+            });
+        }
+
+
+        // 外层用 VBox 包裹，返回最终的布局
+        VBox container = new VBox(mainLayout);
+        container.setPadding(new Insets(10));
+        return container;
     }
+
+
 
     private VBox createAIChatBox(ObservableList<Bill> bills) {
         ObjectMapper mapper = new ObjectMapper();
 
         VBox box = new VBox(10);
         box.setStyle("-fx-background-color: #f4f4f4; -fx-padding: 10; -fx-border-color: #ccc; -fx-border-radius: 5;");
+        box.setPrefWidth(400);
 
         Label label = new Label("💬 Ask AI about your expenses:");
         label.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
@@ -119,69 +152,66 @@ public class AnalysePage {
         return box;
     }
 
-    // 创建按时间的柱状图
-    private void createBarChart(ObservableList<Bill> bills) {
+
+private void createBarChart(ObservableList<Bill> bills) {
+    if (this.timeBarChart == null) {
         CategoryAxis xAxis = new CategoryAxis();
         NumberAxis yAxis = new NumberAxis();
         xAxis.setLabel("Date");
         yAxis.setLabel("Total Cost");
+        this.timeBarChart = new BarChart<>(xAxis, yAxis);
+        this.timeBarChart.setTitle("Total Cost by Date");
 
-        BarChart<String, Number> barChart = new BarChart<>(xAxis, yAxis);
-        barChart.setTitle("Total Cost by Date");
-
-
+        // 初始化一个 Series
         XYChart.Series<String, Number> series = new XYChart.Series<>();
         series.setName("Total Cost");
-
-        Map<String, Double> dateCostMap = new HashMap<>();
-
-        // 遍历账单数据，按日期统计费用
-        for (Bill bill : bills) {
-            String date = bill.getDate().split(" ")[0]; // 取日期部分
-            double cost = Double.parseDouble(bill.getCost().replace(" RMB", ""));
-            dateCostMap.put(date, dateCostMap.getOrDefault(date, 0.0) + cost);
-        }
-
-        // 填充柱状图数据
-        for (Map.Entry<String, Double> entry : dateCostMap.entrySet()) {
-//            series.getData().add(new XYChart.Data<>(entry.getKey(), entry.getValue()));
-            XYChart.Data<String, Number> data = new XYChart.Data<>(entry.getKey(), entry.getValue());
-
-            // 使用 Platform.runLater 确保在渲染完毕后修改颜色
-            Platform.runLater(() -> {
-                // 设置柱状图的颜色
-                data.getNode().setStyle("-fx-bar-fill: #65c43d;");  // 设置柱形的颜色，这里使用了番茄红
-            });
-
-            series.getData().add(data);
-
-        }
-
-        barChart.getData().add(series);
-        System.out.println(series);
-        this.timeBarChart = barChart;
+        this.timeBarChart.getData().add(series);
     }
 
-    // 创建按分类的环状图
+    XYChart.Series<String, Number> series = this.timeBarChart.getData().get(0);
+    series.getData().clear();
+
+    Map<String, Double> dateCostMap = new HashMap<>();
+
+    for (Bill bill : bills) {
+        String date = bill.getDate().split(" ")[0];
+        double cost = Double.parseDouble(bill.getCost().replace(" RMB", ""));
+        dateCostMap.put(date, dateCostMap.getOrDefault(date, 0.0) + cost);
+    }
+
+    for (Map.Entry<String, Double> entry : dateCostMap.entrySet()) {
+        XYChart.Data<String, Number> data = new XYChart.Data<>(entry.getKey(), entry.getValue());
+        Platform.runLater(() -> {
+                if (data.getNode() != null) {
+                    data.getNode().setStyle("-fx-bar-fill: #a8d5ba;"); // 淡绿色
+                }
+            });
+        series.getData().add(data);
+    }
+}
+
     private void createPieChart(ObservableList<Bill> bills) {
-        PieChart pieChart = new PieChart();
+        if (this.categoryPieChart == null) {
+            this.categoryPieChart = new PieChart();
+            this.categoryPieChart.setTitle("Total Cost by Category");
+        }
+        categoryPieChart.setPrefWidth(800); // 设置宽度
+        categoryPieChart.setPrefHeight(800);
+
         Map<String, Double> categoryCostMap = new HashMap<>();
 
-        // 遍历账单数据，按类别统计费用
         for (Bill bill : bills) {
             String type = bill.getType();
             double cost = Double.parseDouble(bill.getCost().replace(" RMB", ""));
             categoryCostMap.put(type, categoryCostMap.getOrDefault(type, 0.0) + cost);
         }
 
-        // 填充环状图数据
-        for (Map.Entry<String, Double> entry : categoryCostMap.entrySet()) {
-            PieChart.Data data = new PieChart.Data(entry.getKey(), entry.getValue());
-            pieChart.getData().add(data);
-        }
+        ObservableList<PieChart.Data> dataList = this.categoryPieChart.getData();
+        dataList.clear();
 
-        pieChart.setTitle("Total Cost by Category");
-        this.categoryPieChart = pieChart;
+        for (Map.Entry<String, Double> entry : categoryCostMap.entrySet()) {
+            dataList.add(new PieChart.Data(entry.getKey(), entry.getValue()));
+        }
     }
 
     private void addMessage(VBox chatMessages, String message, Pos alignment, String bgColor) {
@@ -225,4 +255,3 @@ public class AnalysePage {
     }
 
 }
-

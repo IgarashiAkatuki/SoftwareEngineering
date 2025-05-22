@@ -1,11 +1,25 @@
 package com.bxtz;
 
+import com.bxtz.entity.Message;
+import com.bxtz.entity.Prompt;
+import com.bxtz.utils.AIUtils;
+import com.bxtz.utils.MarkdownUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import javafx.application.Platform;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.chart.*;
+import javafx.scene.control.*;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.Text;
+import javafx.scene.text.TextFlow;
+import javafx.scene.web.WebEngine;
+import javafx.scene.web.WebView;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -16,26 +30,93 @@ public class AnalysePage {
     private BarChart<String, Number> timeBarChart;
     private PieChart categoryPieChart;
 
-    // 创建分析界面
+    private AIUtils aiUtils = new AIUtils();
+
+    private MarkdownUtils markdownUtils = new MarkdownUtils();
+
     public VBox getAnalysisPage(ObservableList<Bill> bills) {
         VBox vbox = new VBox(10);
 
-        // 1. 按时间的柱状图
+        // 创建图表
         createBarChart(bills);
-
-        // 2. 按分类的环状图
         createPieChart(bills);
 
-        vbox.getChildren().addAll(timeBarChart, categoryPieChart);
+        // 创建AI对话框
+        VBox aiBox = createAIChatBox(bills);
+
+        vbox.getChildren().addAll(timeBarChart, categoryPieChart, new Separator(), aiBox);
 
         bills.addListener((ListChangeListener<Bill>) change -> {
-            System.out.println(change);
             createBarChart(bills);
             createPieChart(bills);
             vbox.getChildren().clear();
-            vbox.getChildren().addAll(timeBarChart, categoryPieChart);
+            vbox.getChildren().addAll(timeBarChart, categoryPieChart, new Separator(), aiBox);
         });
+
         return vbox;
+    }
+
+    private VBox createAIChatBox(ObservableList<Bill> bills) {
+        ObjectMapper mapper = new ObjectMapper();
+
+        VBox box = new VBox(10);
+        box.setStyle("-fx-background-color: #f4f4f4; -fx-padding: 10; -fx-border-color: #ccc; -fx-border-radius: 5;");
+
+        Label label = new Label("💬 Ask AI about your expenses:");
+        label.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
+
+        // 聊天内容区域
+        VBox chatMessages = new VBox(8);
+        chatMessages.setPrefWidth(500);
+        chatMessages.setStyle("-fx-padding: 5;");
+
+        ScrollPane scrollPane = new ScrollPane(chatMessages);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setPrefHeight(250);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+
+        // 输入区域
+        TextField inputField = new TextField();
+        inputField.setPromptText("Ask a question (e.g., 哪天花费最多？)");
+        inputField.setPrefWidth(400);
+
+        Button sendButton = new Button("Send");
+        sendButton.setDefaultButton(true);
+
+        HBox inputBox = new HBox(10, inputField, sendButton);
+        inputBox.setAlignment(Pos.CENTER_LEFT);
+        Runnable sendMessage = () -> {
+            String question = inputField.getText().trim();
+            ArrayList<Bill> billList = new ArrayList<>(bills);
+
+            Prompt prompt = new Prompt();
+            Message message = new Message();
+            try {
+                message.setBills(mapper.writeValueAsString(billList));
+                message.setMsg(question);
+                prompt.setPrompt(mapper.writeValueAsString(message));
+            }catch (Exception exception){
+                exception.printStackTrace();
+            }
+
+            if (!question.isEmpty()) {
+                addMessage(chatMessages, "You: " + question, Pos.BASELINE_RIGHT, "#d0f0c0");
+                inputField.clear();
+                new Thread(() -> {
+                    String reply = aiUtils.getResponse(prompt);
+                    Platform.runLater(() -> {
+                        addMarkdownMessage(chatMessages, "AI: " + reply, Pos.BASELINE_LEFT);
+                        scrollPane.setVvalue(1.0); // 滚动到底部
+                    });
+                }).start();
+            }
+        };
+
+        sendButton.setOnAction(e -> sendMessage.run());
+        inputField.setOnAction(e -> sendMessage.run());
+
+        box.getChildren().addAll(label, scrollPane, inputBox);
+        return box;
     }
 
     // 创建按时间的柱状图
@@ -102,5 +183,46 @@ public class AnalysePage {
         pieChart.setTitle("Total Cost by Category");
         this.categoryPieChart = pieChart;
     }
+
+    private void addMessage(VBox chatMessages, String message, Pos alignment, String bgColor) {
+        Text text = new Text(message);
+        text.setWrappingWidth(450); // 限制宽度以自动换行
+        text.setStyle("-fx-font-size: 13px;");
+
+        TextFlow bubble = new TextFlow(text);
+        bubble.setPadding(new Insets(8));
+        bubble.setStyle("-fx-background-color: " + bgColor + "; -fx-background-radius: 10;");
+        bubble.setMaxWidth(480);
+
+        HBox container = new HBox(bubble);
+        container.setAlignment(alignment);
+        chatMessages.getChildren().add(container);
+    }
+
+    private void addMarkdownMessage(VBox chatMessages, String markdown, Pos alignment) {
+        String html = markdownUtils.markdownToHtml(markdown);
+        String htmlPage = """
+            <html>
+            <head>
+                <style>
+                    body { font-family: Arial; padding: 10px; margin: 0; }
+                    pre { background: #f0f0f0; padding: 5px; border-radius: 3px; }
+                    code { font-family: monospace; }
+                </style>
+            </head>
+            <body>%s</body>
+            </html>
+            """.formatted(html);
+
+        WebView webView = new WebView();
+        webView.setMaxWidth(400);  // 限制宽度，防止聊天框拉太宽
+        WebEngine engine = webView.getEngine();
+        engine.loadContent(htmlPage);
+
+        HBox container = new HBox(webView);
+        container.setAlignment(alignment);
+        chatMessages.getChildren().add(container);
+    }
+
 }
 

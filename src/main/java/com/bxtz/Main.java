@@ -14,26 +14,46 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.collections.*;
-
 import javafx.scene.image.Image;
 
 import java.util.Objects;
 
-
+/**
+ * Main application class for the Bills Manager.
+ * It provides a UI to manage, display, and analyze bill entries.
+ *
+ * Created by Group 94.
+ */
 public class Main extends Application {
 
+    /** Table view to display bill entries */
     private TableView<Bill> table = new TableView<>();
+
+    /** Label to show total cost */
     private Label totalCostLabel = new Label("Total Cost: 0 RMB");
+
+    /** Shared utility class for styling and dialogs */
     private Commons commons = new Commons();
 
+    /**
+     * Main entry point of the JavaFX application.
+     *
+     * @param args command-line arguments
+     */
     public static void main(String[] args) {
         launch(args);
     }
 
+    /**
+     * Starts the JavaFX application and initializes the UI.
+     *
+     * @param primaryStage the main application window
+     */
     @Override
     public void start(Stage primaryStage) {
         primaryStage.setTitle("Bills Manager");
 
+        // Header title
         Label title = new Label("Bills Manager by Group 94");
         title.setFont(Font.font("Arial", 24));
         title.setTextFill(Color.WHITE);
@@ -41,79 +61,71 @@ public class Main extends Application {
         header.setPadding(new Insets(15));
         header.setStyle("-fx-background-color: #2c3e50;");
 
+        // Create main content pages
         VBox detailsPage = getDetailsPage(primaryStage);
         VBox analysisPage = getAnalysisPage();
 
+        // Navigation buttons
         Button btnDetails = new Button("Details");
         Button btnAnalysis = new Button("Analysis");
 
-        // Create shadow effect for buttons
+        // Shadow effect for button highlighting
         DropShadow shadow = new DropShadow();
         shadow.setColor(Color.GRAY);
         shadow.setOffsetX(4);
         shadow.setOffsetY(4);
         shadow.setRadius(8);
 
-        // Apply styles to Details and Analysis buttons to make them distinct
+        // Style navigation buttons
         btnDetails.setStyle("-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-size: 16px; -fx-border-radius: 5px; -fx-padding: 10px;");
         btnAnalysis.setStyle("-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-font-size: 16px; -fx-border-radius: 5px; -fx-padding: 10px;");
+        btnDetails.setEffect(shadow); // Highlight default page
 
-        // Apply shadow effect on Details button initially
-        btnDetails.setEffect(shadow);
-
-        // Other buttons with default style
+        // Functional buttons
         Button uploadBtn = commons.createImportButton(table, totalCostLabel, primaryStage);
         Button downloadBtn = commons.createExportButton(table, totalCostLabel, primaryStage);
         Button analyzeBtn = new Button("AI Type Analysis");
         Button addBtn = new Button("Add Bill");
 
+        // Style them
         commons.styleButton1(uploadBtn);
         commons.styleButton2(downloadBtn);
         commons.styleButton3(analyzeBtn);
         commons.styleButton2(addBtn);
 
+        // Button bar
         HBox bar = new HBox(10, btnDetails, btnAnalysis);
         bar.setPadding(new Insets(10));
         bar.setAlignment(Pos.CENTER);
         bar.setStyle("-fx-background-color: #eeeeee;");
 
+        // Switchable content pane
         StackPane contentPane = new StackPane(detailsPage, analysisPage);
-        analysisPage.setVisible(false); // 默认只显示详情页
+        analysisPage.setVisible(false); // Show only details page by default
 
-        // Button action to switch between pages
+        // Switch to details page
         btnDetails.setOnAction(e -> {
             detailsPage.setVisible(true);
             analysisPage.setVisible(false);
-            btnDetails.setEffect(shadow);  // Add shadow to Details button
-            btnAnalysis.setEffect(null);   // Remove shadow from Analysis button
-//              switchPage(analysisPage, detailsPage, contentPane);
+            btnDetails.setEffect(shadow);
+            btnAnalysis.setEffect(null);
         });
 
+        // Switch to analysis page
         btnAnalysis.setOnAction(e -> {
             detailsPage.setVisible(false);
             analysisPage.setVisible(true);
-            btnDetails.setEffect(null);    // Remove shadow from Details button
-            btnAnalysis.setEffect(shadow); // Add shadow to Analysis button
-//            switchPage(detailsPage, analysisPage, contentPane);
-
+            btnDetails.setEffect(null);
+            btnAnalysis.setEffect(shadow);
         });
 
-
-        // Button release effect
+        // Keep shadow effect on button release
         btnDetails.setOnMouseReleased(e -> {
-            if (detailsPage.isVisible()) {
-                btnDetails.setEffect(shadow);
-            } else {
-                btnDetails.setEffect(null);
-            }
+            btnDetails.setEffect(detailsPage.isVisible() ? shadow : null);
         });
 
         btnAnalysis.setOnMouseReleased(e -> {
-            if (analysisPage.isVisible()) {
-                btnAnalysis.setEffect(shadow);
-            } else {
-                btnAnalysis.setEffect(null);
-            }
+            btnAnalysis.setEffect(analysisPage.isVisible() ? shadow : null);
         });
 
         VBox root = new VBox(header, bar, contentPane);
@@ -124,6 +136,14 @@ public class Main extends Application {
         primaryStage.show();
     }
 
+    /**
+     * Creates a reusable column for the bill table.
+     *
+     * @param title    the column header
+     * @param property the bill property (e.g., "date", "name", etc.)
+     * @param style    the CSS style to apply
+     * @return the configured table column
+     */
     private TableColumn<Bill, String> createColumn(String title, String property, String style) {
         TableColumn<Bill, String> col = new TableColumn<>(title);
         col.setStyle(style);
@@ -138,7 +158,14 @@ public class Main extends Application {
         return col;
     }
 
+    /**
+     * Builds the bill details page.
+     *
+     * @param primaryStage the main stage for file dialogs
+     * @return a VBox containing the details view
+     */
     private VBox getDetailsPage(Stage primaryStage) {
+        // Top action buttons
         HBox topButtons = new HBox(15);
         topButtons.setPadding(new Insets(15));
         topButtons.setStyle("-fx-background-color: #ecf0f1;");
@@ -148,9 +175,8 @@ public class Main extends Application {
         Button analyzeBtn = new Button("AI Type Analysis");
         Button addBtn = new Button("Add Bill");
 
-        addBtn.setOnAction((e) -> {
-            commons.showAddDialog(table, totalCostLabel);
-        });
+        addBtn.setOnAction(e -> commons.showAddDialog(table, totalCostLabel));
+
         commons.styleButton1(uploadBtn);
         commons.styleButton2(downloadBtn);
         commons.styleButton3(analyzeBtn);
@@ -159,6 +185,7 @@ public class Main extends Application {
         totalCostLabel.setFont(Font.font(14));
         topButtons.getChildren().addAll(uploadBtn, downloadBtn, addBtn, analyzeBtn, totalCostLabel);
 
+        // Setup table
         table.setStyle("-fx-background-color: white; -fx-border-color: #bdc3c7;");
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         table.setPadding(new Insets(10));
@@ -171,6 +198,7 @@ public class Main extends Application {
         TableColumn<Bill, String> costCol = createColumn("Cost", "cost", headerStyle);
         TableColumn<Bill, String> typeCol = createColumn("Type", "type", headerStyle);
 
+        // Add icons to type column
         typeCol.setCellFactory(col -> new TableCell<>() {
             @Override
             protected void updateItem(String item, boolean empty) {
@@ -186,15 +214,12 @@ public class Main extends Application {
                         case "Shopping" -> imageView = new ImageView(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/image/shopping_icon.png"))));
                         case "Entertainment" -> imageView = new ImageView(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/image/game_icon.png"))));
                         case "Others" -> imageView = new ImageView(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/image/others_icon.png"))));
-                        default -> imageView = null;
                     }
                     if (imageView != null) {
-                        imageView.setFitWidth(16);       // 设定宽度，比如16像素
-                        imageView.setFitHeight(16);      // 设定高度，比如16像素
-                        imageView.setPreserveRatio(true); // 保持比例
+                        imageView.setFitWidth(16);
+                        imageView.setFitHeight(16);
+                        imageView.setPreserveRatio(true);
                         label.setGraphic(imageView);
-                    } else {
-                        label.setGraphic(null);
                     }
                     label.setGraphicTextGap(10);
                     setGraphic(label);
@@ -202,10 +227,11 @@ public class Main extends Application {
             }
         });
 
-
+        // Add edit column
         TableColumn<Bill, Void> editCol = new TableColumn<>("Edit");
         editCol.setCellFactory(param -> new TableCell<>() {
             private final Button btn = new Button("Edit");
+
             {
                 commons.styleButton1(btn);
                 btn.setOnAction(event -> {
@@ -218,14 +244,11 @@ public class Main extends Application {
             @Override
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty) {
-                    setGraphic(null);
-                } else {
-                    setGraphic(btn);
-                }
+                setGraphic(empty ? null : btn);
             }
         });
 
+        // Add columns and data
         table.getColumns().addAll(dateCol, nameCol, detailCol, costCol, typeCol, editCol);
 
         ObservableList<Bill> data = FXCollections.observableArrayList(
@@ -242,23 +265,24 @@ public class Main extends Application {
         return detailsPage;
     }
 
+    /**
+     * Builds the analysis page.
+     *
+     * @return a VBox containing analysis charts and summary
+     */
     private VBox getAnalysisPage() {
-        // 创建分析页面标题
         Label analysisTitle = new Label("Bill  Analysis");
         analysisTitle.setFont(Font.font("Arial", 20));
         analysisTitle.setStyle("-fx-font-weight: bold;");
         analysisTitle.setTextFill(Color.BLACK);
 
-        // 创建分析界面，传入账单数据
         AnalysePage analysePage = new AnalysePage();
         VBox analysisContent = analysePage.getAnalysisPage(table.getItems());
 
-        // 布局分析页面
         VBox analysisPageLayout = new VBox(20, analysisTitle, analysisContent);
         analysisPageLayout.setPadding(new Insets(20));
         analysisPageLayout.setStyle("-fx-background-color: #f9f9f9;");
 
         return analysisPageLayout;
     }
-
 }

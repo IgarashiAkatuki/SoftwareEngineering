@@ -1,3 +1,7 @@
+/**
+ * A utility class providing common functionalities for bill management in the application.
+ * Includes methods for updating totals, styling UI elements, and handling dialog operations.
+ */
 package com.bxtz;
 
 import com.bxtz.utils.BillUtils;
@@ -19,6 +23,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Commons {
+    /**
+     * Updates the total cost label by summing all bill amounts in the list.
+     *
+     * @param bills The observable list of bills to calculate from
+     * @param totalCost The label to display the calculated total
+     */
     public void updateTotalCost(ObservableList<Bill> bills, Label totalCost) {
         double sum = 0.0;
         for (Bill b : bills) {
@@ -30,26 +40,58 @@ public class Commons {
         totalCost.setText("Total Cost: " + sum + " RMB");
     }
 
+    /**
+     * Applies style #1 to a button (blue color scheme).
+     *
+     * @param btn The button to style
+     */
     public void styleButton1(Button btn) {
         btn.setStyle("-fx-background-color: #3c9cfc; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 8;");
     }
 
+    /**
+     * Applies style #2 to a button (green color scheme).
+     *
+     * @param btn The button to style
+     */
     public void styleButton2(Button btn) {
         btn.setStyle("-fx-background-color: #65c43d; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 8;");
     }
 
+    /**
+     * Applies style #3 to a button (orange color scheme).
+     *
+     * @param btn The button to style
+     */
     public void styleButton3(Button btn) {
         btn.setStyle("-fx-background-color: #e4a43c; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 8;");
     }
 
+    /**
+     * Applies style #4 to a button (red color scheme).
+     *
+     * @param btn The button to style
+     */
     public void styleButton4(Button btn) {
         btn.setStyle("-fx-background-color: #F56C6C; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 8;");
     }
 
+    /**
+     * Applies style #5 to a button (gray color scheme).
+     *
+     * @param btn The button to style
+     */
     public void styleButton5(Button btn) {
         btn.setStyle("-fx-background-color: #909399; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 8;");
     }
 
+    /**
+     * Displays a dialog for editing an existing bill record.
+     *
+     * @param bill The bill record to edit
+     * @param table The table view containing the bills
+     * @param totalCost The label displaying the total cost
+     */
     public void showEditDialog(Bill bill, TableView<Bill> table, Label totalCost) {
         Dialog<Bill> dialog = new Dialog<>();
         dialog.setTitle("Edit Bill");
@@ -118,6 +160,14 @@ public class Commons {
         });
     }
 
+    /**
+     * Creates and returns an export button for saving bills to CSV.
+     *
+     * @param table The table view containing bills to export
+     * @param totalCost The label displaying total cost
+     * @param stage The parent stage for the file chooser
+     * @return Configured export button
+     */
     public Button createExportButton(TableView<Bill> table, Label totalCost, Stage stage) {
         Button exportBtn = new Button("Download Bills");
         exportBtn.setOnAction(e -> {
@@ -132,6 +182,14 @@ public class Commons {
         return exportBtn;
     }
 
+    /**
+     * Creates and returns an import button for loading bills from CSV.
+     *
+     * @param table The table view to populate with imported bills
+     * @param totalCost The label to update with new total cost
+     * @param stage The parent stage for the file chooser
+     * @return Configured import button
+     */
     public Button createImportButton(TableView<Bill> table, Label totalCost, Stage stage) {
         Button importBtn = new Button("Upload Bills");
         importBtn.setOnAction(e -> {
@@ -149,6 +207,12 @@ public class Commons {
         return importBtn;
     }
 
+    /**
+     * Displays a dialog for adding a new bill record.
+     *
+     * @param table The table view to add the new bill to
+     * @param totalCost The label to update with new total cost
+     */
     public void showAddDialog(TableView<Bill> table, Label totalCost) {
         Dialog<Bill> dialog = new Dialog<>();
         dialog.setTitle("Add Bill");
@@ -261,17 +325,30 @@ public class Commons {
         });
     }
 
-    // Method to style the RadioButton for consistency
+    /**
+     * Applies consistent styling to radio buttons.
+     *
+     * @param radioButton The radio button to style
+     */
     private void styleRadioButton(RadioButton radioButton) {
         radioButton.setStyle("-fx-background-color: #ecf0f1; -fx-border-color: #bdc3c7; -fx-padding: 5;");
     }
 
-    // Method to set a uniform width for the RadioButton
+    /**
+     * Sets a uniform width for radio buttons.
+     *
+     * @param radioButton The radio button to resize
+     */
     private void setRadioButtonWidth(RadioButton radioButton) {
         radioButton.setMinWidth(120);  // Set a fixed width for each button
     }
 
-    // Method to check if the date is in the correct format
+    /**
+     * Validates a date string against the expected format.
+     *
+     * @param date The date string to validate
+     * @return true if valid, false otherwise
+     */
     private boolean isValidDate(String date) {
         try {
             LocalDateTime.parse(date, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
@@ -281,7 +358,12 @@ public class Commons {
         }
     }
 
-    // Method to check if the cost is in the correct format
+    /**
+     * Validates a cost string is a valid number.
+     *
+     * @param cost The cost string to validate
+     * @return true if valid, false otherwise
+     */
     private boolean isValidCost(String cost) {
         try {
             // Try parsing the cost as a valid number (double)
@@ -292,7 +374,11 @@ public class Commons {
         }
     }
 
-    // Method to show an error dialog (keeping the dialog open)
+    /**
+     * Displays an error dialog with the specified message.
+     *
+     * @param message The error message to display
+     */
     private void showErrorDialog(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle("Error");
@@ -301,4 +387,3 @@ public class Commons {
         alert.showAndWait();  // Display error and keep the dialog open for correction
     }
 }
-

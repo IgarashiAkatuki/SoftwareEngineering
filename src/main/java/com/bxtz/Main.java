@@ -5,12 +5,20 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.effect.DropShadow;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.collections.*;
+
+import javafx.scene.image.Image;
+
+import java.util.Objects;
+
 
 public class Main extends Application {
 
@@ -78,6 +86,7 @@ public class Main extends Application {
             analysisPage.setVisible(false);
             btnDetails.setEffect(shadow);  // Add shadow to Details button
             btnAnalysis.setEffect(null);   // Remove shadow from Analysis button
+//              switchPage(analysisPage, detailsPage, contentPane);
         });
 
         btnAnalysis.setOnAction(e -> {
@@ -85,18 +94,10 @@ public class Main extends Application {
             analysisPage.setVisible(true);
             btnDetails.setEffect(null);    // Remove shadow from Details button
             btnAnalysis.setEffect(shadow); // Add shadow to Analysis button
+//            switchPage(detailsPage, analysisPage, contentPane);
+
         });
 
-        // Button press effect
-        btnDetails.setOnMousePressed(e -> {
-            btnDetails.setEffect(shadow);
-            btnAnalysis.setEffect(null);
-        });
-
-        btnAnalysis.setOnMousePressed(e -> {
-            btnAnalysis.setEffect(shadow);
-            btnDetails.setEffect(null);
-        });
 
         // Button release effect
         btnDetails.setOnMouseReleased(e -> {
@@ -170,6 +171,38 @@ public class Main extends Application {
         TableColumn<Bill, String> costCol = createColumn("Cost", "cost", headerStyle);
         TableColumn<Bill, String> typeCol = createColumn("Type", "type", headerStyle);
 
+        typeCol.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setGraphic(null);
+                    setText(null);
+                } else {
+                    Label label = new Label(item);
+                    ImageView imageView = null;
+                    switch (item) {
+                        case "Food" -> imageView = new ImageView(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/image/food_icon.png"))));
+                        case "Shopping" -> imageView = new ImageView(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/image/shopping_icon.png"))));
+                        case "Entertainment" -> imageView = new ImageView(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/image/game_icon.png"))));
+                        case "Others" -> imageView = new ImageView(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/image/others_icon.png"))));
+                        default -> imageView = null;
+                    }
+                    if (imageView != null) {
+                        imageView.setFitWidth(16);       // 设定宽度，比如16像素
+                        imageView.setFitHeight(16);      // 设定高度，比如16像素
+                        imageView.setPreserveRatio(true); // 保持比例
+                        label.setGraphic(imageView);
+                    } else {
+                        label.setGraphic(null);
+                    }
+                    label.setGraphicTextGap(10);
+                    setGraphic(label);
+                }
+            }
+        });
+
+
         TableColumn<Bill, Void> editCol = new TableColumn<>("Edit");
         editCol.setCellFactory(param -> new TableCell<>() {
             private final Button btn = new Button("Edit");
@@ -198,7 +231,7 @@ public class Main extends Application {
         ObservableList<Bill> data = FXCollections.observableArrayList(
                 new Bill("2025-02-01 12:00", "Mei Tuan", "Takeout", "50 RMB", "Food"),
                 new Bill("2025-02-02 20:45", "Amazon", "Shopping", "120 RMB", "Shopping"),
-                new Bill("2025-02-06 01:00", "ApplePay", "Online Pay", "648 RMB", "Game")
+                new Bill("2025-02-06 01:00", "ApplePay", "Online Pay", "648 RMB", "Entertainment")
         );
         table.setItems(data);
         commons.updateTotalCost(data, totalCostLabel);

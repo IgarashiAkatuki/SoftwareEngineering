@@ -1,3 +1,8 @@
+/**
+ * The AnalysePage class provides financial analysis and AI chat functionality for bill data.
+ * It generates visual charts (bar and pie) showing expense patterns and includes an interactive
+ * AI assistant for querying expense data.
+ */
 package com.bxtz;
 
 import com.bxtz.entity.Message;
@@ -24,41 +29,44 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class AnalysePage {
-
     private Commons commons = new Commons();
-
     private BarChart<String, Number> timeBarChart;
     private PieChart categoryPieChart;
-
     private AIUtils aiUtils = new AIUtils();
-
     private MarkdownUtils markdownUtils = new MarkdownUtils();
 
+    /**
+     * Creates and returns the complete analysis page with charts and AI chat.
+     *
+     * @param bills The observable list of bills to analyze
+     * @return VBox containing the complete analysis interface
+     */
     public VBox getAnalysisPage(ObservableList<Bill> bills) {
         HBox mainLayout = new HBox(10);
         mainLayout.setPadding(new Insets(10));
         mainLayout.setStyle("-fx-background-color: #ffffff;");
 
-        // 创建图表容器 VBox
+        // Create chart container VBox
         VBox chartsBox = new VBox(10);
-        chartsBox.setPrefWidth(600); // 图表区域的宽度
+        chartsBox.setPrefWidth(600);
         chartsBox.setPadding(new Insets(10));
         chartsBox.setStyle("-fx-background-color: #f9f9f9; -fx-border-color: #ddd; -fx-border-width: 1;");
 
-        // 创建图表
+        // Create charts
         createBarChart(bills);
         createPieChart(bills);
 
         chartsBox.getChildren().addAll(timeBarChart, categoryPieChart, new Separator());
 
-        // 创建 AI 聊天界面
+        // Create AI chat interface
         VBox aiBox = createAIChatBox(bills);
-        aiBox.setPrefWidth(300); // 设置 AI 区域的宽度
+        aiBox.setPrefWidth(300);
         aiBox.setStyle("-fx-background-color: #f4f4f4; -fx-border-color: #ddd; -fx-border-width: 1;");
 
-        // 将图表和 AI 区域添加到主布局
+        // Add charts and AI area to main layout
         mainLayout.getChildren().addAll(chartsBox, aiBox);
 
+        // Set up listeners for bill changes
         bills.addListener((ListChangeListener<Bill>) change -> {
             while (change.next()) {
                 if (change.wasAdded() || change.wasRemoved() || change.wasUpdated() || change.wasReplaced()) {
@@ -68,6 +76,7 @@ public class AnalysePage {
             }
         });
 
+        // Set up property change listeners for individual bills
         for (Bill bill : bills) {
             bill.costProperty().addListener((observable, oldValue, newValue) -> {
                 createBarChart(bills);
@@ -79,15 +88,18 @@ public class AnalysePage {
             });
         }
 
-
-        // 外层用 VBox 包裹，返回最终的布局
+        // Wrap in outer VBox
         VBox container = new VBox(mainLayout);
         container.setPadding(new Insets(10));
         return container;
     }
 
-
-
+    /**
+     * Creates the AI chat interface box.
+     *
+     * @param bills The list of bills to use for AI analysis
+     * @return VBox containing the complete AI chat interface
+     */
     private VBox createAIChatBox(ObservableList<Bill> bills) {
         ObjectMapper mapper = new ObjectMapper();
 
@@ -98,7 +110,7 @@ public class AnalysePage {
         Label label = new Label("💬 Ask AI about your expenses:");
         label.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
 
-        // 聊天内容区域
+        // Chat message area
         VBox chatMessages = new VBox(8);
         chatMessages.setPrefWidth(500);
         chatMessages.setStyle("-fx-padding: 5;");
@@ -108,9 +120,9 @@ public class AnalysePage {
         scrollPane.setPrefHeight(250);
         scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
 
-        // 输入区域
+        // Input area
         TextField inputField = new TextField();
-        inputField.setPromptText("Ask a question (e.g., 哪天花费最多？)");
+        inputField.setPromptText("Ask a question (e.g., Which day had highest spending?)");
         inputField.setPrefWidth(400);
 
         Button sendButton = new Button("Send");
@@ -118,6 +130,7 @@ public class AnalysePage {
 
         HBox inputBox = new HBox(10, inputField, sendButton);
         inputBox.setAlignment(Pos.CENTER_LEFT);
+
         Runnable sendMessage = () -> {
             String question = inputField.getText().trim();
             ArrayList<Bill> billList = new ArrayList<>(bills);
@@ -128,7 +141,7 @@ public class AnalysePage {
                 message.setBills(mapper.writeValueAsString(billList));
                 message.setMsg(question);
                 prompt.setPrompt(mapper.writeValueAsString(message));
-            }catch (Exception exception){
+            } catch (Exception exception) {
                 exception.printStackTrace();
             }
 
@@ -139,7 +152,7 @@ public class AnalysePage {
                     String reply = aiUtils.getResponse(prompt);
                     Platform.runLater(() -> {
                         addMarkdownMessage(chatMessages, "AI: " + reply, Pos.BASELINE_LEFT);
-                        scrollPane.setVvalue(1.0); // 滚动到底部
+                        scrollPane.setVvalue(1.0); // Scroll to bottom
                     });
                 }).start();
             }
@@ -152,50 +165,58 @@ public class AnalysePage {
         return box;
     }
 
+    /**
+     * Creates/updates the bar chart showing expenses by date.
+     *
+     * @param bills The list of bills to visualize
+     */
+    private void createBarChart(ObservableList<Bill> bills) {
+        if (this.timeBarChart == null) {
+            CategoryAxis xAxis = new CategoryAxis();
+            NumberAxis yAxis = new NumberAxis();
+            xAxis.setLabel("Date");
+            yAxis.setLabel("Total Cost");
+            this.timeBarChart = new BarChart<>(xAxis, yAxis);
+            this.timeBarChart.setTitle("Total Cost by Date");
 
-private void createBarChart(ObservableList<Bill> bills) {
-    if (this.timeBarChart == null) {
-        CategoryAxis xAxis = new CategoryAxis();
-        NumberAxis yAxis = new NumberAxis();
-        xAxis.setLabel("Date");
-        yAxis.setLabel("Total Cost");
-        this.timeBarChart = new BarChart<>(xAxis, yAxis);
-        this.timeBarChart.setTitle("Total Cost by Date");
+            XYChart.Series<String, Number> series = new XYChart.Series<>();
+            series.setName("Total Cost");
+            this.timeBarChart.getData().add(series);
+        }
 
-        // 初始化一个 Series
-        XYChart.Series<String, Number> series = new XYChart.Series<>();
-        series.setName("Total Cost");
-        this.timeBarChart.getData().add(series);
-    }
+        XYChart.Series<String, Number> series = this.timeBarChart.getData().get(0);
+        series.getData().clear();
 
-    XYChart.Series<String, Number> series = this.timeBarChart.getData().get(0);
-    series.getData().clear();
+        Map<String, Double> dateCostMap = new HashMap<>();
 
-    Map<String, Double> dateCostMap = new HashMap<>();
+        for (Bill bill : bills) {
+            String date = bill.getDate().split(" ")[0];
+            double cost = Double.parseDouble(bill.getCost().replace(" RMB", ""));
+            dateCostMap.put(date, dateCostMap.getOrDefault(date, 0.0) + cost);
+        }
 
-    for (Bill bill : bills) {
-        String date = bill.getDate().split(" ")[0];
-        double cost = Double.parseDouble(bill.getCost().replace(" RMB", ""));
-        dateCostMap.put(date, dateCostMap.getOrDefault(date, 0.0) + cost);
-    }
-
-    for (Map.Entry<String, Double> entry : dateCostMap.entrySet()) {
-        XYChart.Data<String, Number> data = new XYChart.Data<>(entry.getKey(), entry.getValue());
-        Platform.runLater(() -> {
+        for (Map.Entry<String, Double> entry : dateCostMap.entrySet()) {
+            XYChart.Data<String, Number> data = new XYChart.Data<>(entry.getKey(), entry.getValue());
+            Platform.runLater(() -> {
                 if (data.getNode() != null) {
-                    data.getNode().setStyle("-fx-bar-fill: #a8d5ba;"); // 淡绿色
+                    data.getNode().setStyle("-fx-bar-fill: #a8d5ba;"); // Light green
                 }
             });
-        series.getData().add(data);
+            series.getData().add(data);
+        }
     }
-}
 
+    /**
+     * Creates/updates the pie chart showing expenses by category.
+     *
+     * @param bills The list of bills to visualize
+     */
     private void createPieChart(ObservableList<Bill> bills) {
         if (this.categoryPieChart == null) {
             this.categoryPieChart = new PieChart();
             this.categoryPieChart.setTitle("Total Cost by Category");
         }
-        categoryPieChart.setPrefWidth(800); // 设置宽度
+        categoryPieChart.setPrefWidth(800);
         categoryPieChart.setPrefHeight(800);
 
         Map<String, Double> categoryCostMap = new HashMap<>();
@@ -214,9 +235,17 @@ private void createBarChart(ObservableList<Bill> bills) {
         }
     }
 
+    /**
+     * Adds a text message to the chat interface.
+     *
+     * @param chatMessages The container for chat messages
+     * @param message The message text to display
+     * @param alignment The alignment of the message bubble
+     * @param bgColor The background color of the message bubble
+     */
     private void addMessage(VBox chatMessages, String message, Pos alignment, String bgColor) {
         Text text = new Text(message);
-        text.setWrappingWidth(450); // 限制宽度以自动换行
+        text.setWrappingWidth(450);
         text.setStyle("-fx-font-size: 13px;");
 
         TextFlow bubble = new TextFlow(text);
@@ -229,6 +258,13 @@ private void createBarChart(ObservableList<Bill> bills) {
         chatMessages.getChildren().add(container);
     }
 
+    /**
+     * Adds a markdown-formatted message to the chat interface (rendered as HTML).
+     *
+     * @param chatMessages The container for chat messages
+     * @param markdown The markdown content to display
+     * @param alignment The alignment of the message bubble
+     */
     private void addMarkdownMessage(VBox chatMessages, String markdown, Pos alignment) {
         String html = markdownUtils.markdownToHtml(markdown);
         String htmlPage = """
@@ -245,7 +281,7 @@ private void createBarChart(ObservableList<Bill> bills) {
             """.formatted(html);
 
         WebView webView = new WebView();
-        webView.setMaxWidth(400);  // 限制宽度，防止聊天框拉太宽
+        webView.setMaxWidth(400);
         WebEngine engine = webView.getEngine();
         engine.loadContent(htmlPage);
 
@@ -253,5 +289,4 @@ private void createBarChart(ObservableList<Bill> bills) {
         container.setAlignment(alignment);
         chatMessages.getChildren().add(container);
     }
-
 }

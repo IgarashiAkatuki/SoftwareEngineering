@@ -1,7 +1,3 @@
-/**
- * A utility class providing common functionalities for bill management in the application.
- * Includes methods for updating totals, styling UI elements, and handling dialog operations.
- */
 package com.bxtz;
 
 import com.bxtz.utils.BillUtils;
@@ -19,8 +15,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+// import java.util.regex.Matcher; // regex.Matcher and Pattern not used
+// import java.util.regex.Pattern;
 
 public class Commons {
     /**
@@ -32,74 +28,55 @@ public class Commons {
     public void updateTotalCost(ObservableList<Bill> bills, Label totalCost) {
         double sum = 0.0;
         for (Bill b : bills) {
-            if ("".equals(b.getCost())) {
+            if ("".equals(b.getCost()) || b.getCost() == null) { // Added null check for safety
                 continue;
             }
-            sum += Double.parseDouble(b.getCost().replace(" RMB", ""));
+            // Ensure " RMB" is removed before parsing, handle cases where it might be missing
+            String costString = b.getCost().toLowerCase().replace("rmb", "").trim();
+            if (costString.isEmpty()) {
+                continue;
+            }
+            try {
+                sum += Double.parseDouble(costString);
+            } catch (NumberFormatException e) {
+                System.err.println("Could not parse cost: " + b.getCost());
+                // Optionally handle this error more gracefully
+            }
         }
-        totalCost.setText("Total Cost: " + sum + " RMB");
+        totalCost.setText("Total Cost: " + String.format("%.2f", sum) + " RMB"); // Format to 2 decimal places
     }
 
-    /**
-     * Applies style #1 to a button (blue color scheme).
-     *
-     * @param btn The button to style
-     */
+    // ... (styleButton methods remain the same) ...
     public void styleButton1(Button btn) {
         btn.setStyle("-fx-background-color: #3c9cfc; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 8;");
     }
 
-    /**
-     * Applies style #2 to a button (green color scheme).
-     *
-     * @param btn The button to style
-     */
     public void styleButton2(Button btn) {
         btn.setStyle("-fx-background-color: #65c43d; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 8;");
     }
 
-    /**
-     * Applies style #3 to a button (orange color scheme).
-     *
-     * @param btn The button to style
-     */
     public void styleButton3(Button btn) {
         btn.setStyle("-fx-background-color: #e4a43c; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 8;");
     }
 
-    /**
-     * Applies style #4 to a button (red color scheme).
-     *
-     * @param btn The button to style
-     */
     public void styleButton4(Button btn) {
         btn.setStyle("-fx-background-color: #F56C6C; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 8;");
     }
 
-    /**
-     * Applies style #5 to a button (gray color scheme).
-     *
-     * @param btn The button to style
-     */
     public void styleButton5(Button btn) {
         btn.setStyle("-fx-background-color: #909399; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 8;");
     }
 
-    /**
-     * Displays a dialog for editing an existing bill record.
-     *
-     * @param bill The bill record to edit
-     * @param table The table view containing the bills
-     * @param totalCost The label displaying the total cost
-     */
+
     public void showEditDialog(Bill bill, TableView<Bill> table, Label totalCost) {
         Dialog<Bill> dialog = new Dialog<>();
         dialog.setTitle("Edit Bill");
 
+        // Use original cost string for editing, which might include " RMB"
         TextField dateField = new TextField(bill.getDate());
         TextField nameField = new TextField(bill.getName());
         TextField detailsField = new TextField(bill.getDetails());
-        TextField costField = new TextField(bill.getCost());
+        TextField costField = new TextField(bill.getCost()); // Keep " RMB" if present for display
         TextField typeField = new TextField(bill.getType());
 
         GridPane grid = new GridPane();
@@ -119,13 +96,14 @@ public class Commons {
         grid.add(typeField, 1, 4);
 
         Button deleteBtn = new Button("Delete Bill");
-        styleButton4(deleteBtn);
-        deleteBtn.setOnAction(edited -> {
+        styleButton4(deleteBtn); //
+        deleteBtn.setOnAction(event -> { // Changed variable name from edited to event
             ObservableList<Bill> bills = table.getItems();
             bills.remove(bill);
-            table.setItems(bills);
-            updateTotalCost(table.getItems(), totalCost);
+            // No need to call table.setItems(bills) if bills is the original list from table.getItems()
+            updateTotalCost(bills, totalCost);
             table.refresh();
+            dialog.close(); // Close dialog after delete
         });
         grid.add(deleteBtn, 1, 5);
 
@@ -136,11 +114,32 @@ public class Commons {
 
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == saveButtonType) {
+                String date = dateField.getText();
+                String costStr = costField.getText(); // Cost string from field
+
+                if (!isValidDate(date)) {
+                    showErrorDialog("Format error: Invalid date format. Please use yyyy-MM-dd HH:mm.");
+                    return null;
+                }
+                // For cost, check if it's a valid number part, then ensure " RMB" is appended
+                String numericCostPart = costStr.toLowerCase().replace("rmb", "").trim();
+                if (!isValidCost(numericCostPart)) { // Validate only the numeric part
+                    showErrorDialog("Format error: Invalid cost format. Please enter a valid number.");
+                    return null;
+                }
+                // Ensure " RMB" suffix, avoid double suffix
+                if (!numericCostPart.isEmpty() && !costStr.toLowerCase().endsWith("rmb")) {
+                    costStr = numericCostPart + " RMB";
+                } else if (numericCostPart.isEmpty()) {
+                    costStr = "0 RMB"; // Default if empty after stripping
+                }
+
+
                 return new Bill(
-                        dateField.getText(),
+                        date,
                         nameField.getText(),
                         detailsField.getText(),
-                        costField.getText(),
+                        costStr, // Use potentially modified costStr
                         typeField.getText()
                 );
             }
@@ -149,70 +148,52 @@ public class Commons {
 
         Optional<Bill> result = dialog.showAndWait();
 
-        result.ifPresent(edited -> {
-            bill.dateProperty().set(edited.getDate());
-            bill.nameProperty().set(edited.getName());
-            bill.detailsProperty().set(edited.getDetails());
-            bill.costProperty().set(edited.getCost());
-            bill.typeProperty().set(edited.getType());
+        result.ifPresent(editedBill -> { // Changed variable name
+            bill.dateProperty().set(editedBill.getDate());
+            bill.nameProperty().set(editedBill.getName());
+            bill.detailsProperty().set(editedBill.getDetails());
+            bill.costProperty().set(editedBill.getCost());
+            bill.typeProperty().set(editedBill.getType());
             updateTotalCost(table.getItems(), totalCost);
             table.refresh();
         });
     }
 
-    /**
-     * Creates and returns an export button for saving bills to CSV.
-     *
-     * @param table The table view containing bills to export
-     * @param totalCost The label displaying total cost
-     * @param stage The parent stage for the file chooser
-     * @return Configured export button
-     */
     public Button createExportButton(TableView<Bill> table, Label totalCost, Stage stage) {
         Button exportBtn = new Button("Download Bills");
         exportBtn.setOnAction(e -> {
             FileChooser fileChooser = new FileChooser();
-            fileChooser.setTitle("save CSV file");
-            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV file", "*.csv"));
+            fileChooser.setTitle("Save CSV file"); // Corrected title
+            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV file (*.csv)", "*.csv"));
             File file = fileChooser.showSaveDialog(stage);
             if (file != null) {
+                // Ensure filename ends with .csv
+                if (!file.getName().toLowerCase().endsWith(".csv")) {
+                    file = new File(file.getAbsolutePath() + ".csv");
+                }
                 BillUtils.exportToCSV(table.getItems(), file);
             }
         });
         return exportBtn;
     }
 
-    /**
-     * Creates and returns an import button for loading bills from CSV.
-     *
-     * @param table The table view to populate with imported bills
-     * @param totalCost The label to update with new total cost
-     * @param stage The parent stage for the file chooser
-     * @return Configured import button
-     */
     public Button createImportButton(TableView<Bill> table, Label totalCost, Stage stage) {
         Button importBtn = new Button("Upload Bills");
         importBtn.setOnAction(e -> {
             FileChooser fileChooser = new FileChooser();
-            fileChooser.setTitle("export CSV file");
-            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV file", "*.csv"));
+            fileChooser.setTitle("Open CSV file"); // Corrected title
+            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV file (*.csv)", "*.csv"));
             File file = fileChooser.showOpenDialog(stage);
             if (file != null) {
                 List<Bill> newBills = BillUtils.importFromCSV(file);
                 ObservableList<Bill> bills = FXCollections.observableArrayList(newBills);
-                table.setItems(bills);
+                table.setItems(bills); // This replaces all existing bills. If appending is desired, use table.getItems().addAll(bills);
                 updateTotalCost(bills, totalCost);
             }
         });
         return importBtn;
     }
 
-    /**
-     * Displays a dialog for adding a new bill record.
-     *
-     * @param table The table view to add the new bill to
-     * @param totalCost The label to update with new total cost
-     */
     public void showAddDialog(TableView<Bill> table, Label totalCost) {
         Dialog<Bill> dialog = new Dialog<>();
         dialog.setTitle("Add Bill");
@@ -222,12 +203,9 @@ public class Commons {
         TextField dateField = new TextField(LocalDateTime.now().format(formatter));
         TextField nameField = new TextField("");
         TextField detailsField = new TextField("");
-        TextField costField = new TextField("");
+        TextField costField = new TextField(""); // User enters only the number
 
-        // Create a ToggleGroup to ensure only one RadioButton can be selected at a time
         ToggleGroup typeGroup = new ToggleGroup();
-
-        // Create RadioButtons for predefined types
         RadioButton foodButton = new RadioButton("Food");
         foodButton.setToggleGroup(typeGroup);
         RadioButton shoppingButton = new RadioButton("Shopping");
@@ -236,24 +214,21 @@ public class Commons {
         entertainmentButton.setToggleGroup(typeGroup);
         RadioButton othersButton = new RadioButton("Others");
         othersButton.setToggleGroup(typeGroup);
-
-        // Make sure one option is selected by default
         foodButton.setSelected(true);
 
-        // Style the buttons for consistency
-        styleRadioButton(foodButton);
-        styleRadioButton(shoppingButton);
-        styleRadioButton(entertainmentButton);
-        styleRadioButton(othersButton);
+        styleRadioButton(foodButton); //
+        styleRadioButton(shoppingButton); //
+        styleRadioButton(entertainmentButton); //
+        styleRadioButton(othersButton); //
 
         VBox typeBox = new VBox(10, foodButton, shoppingButton, entertainmentButton, othersButton);
-        typeBox.setSpacing(5);
+        typeBox.setSpacing(5); // Consistent spacing
 
-        // Add consistent width to the labels and buttons
-        setRadioButtonWidth(foodButton);
-        setRadioButtonWidth(shoppingButton);
-        setRadioButtonWidth(entertainmentButton);
-        setRadioButtonWidth(othersButton);
+        setRadioButtonWidth(foodButton); //
+        setRadioButtonWidth(shoppingButton); //
+        setRadioButtonWidth(entertainmentButton); //
+        setRadioButtonWidth(othersButton); //
+
 
         GridPane grid = new GridPane();
         grid.setHgap(10);
@@ -266,7 +241,7 @@ public class Commons {
         grid.add(nameField, 1, 1);
         grid.add(new Label("Details:"), 0, 2);
         grid.add(detailsField, 1, 2);
-        grid.add(new Label("Cost:"), 0, 3);
+        grid.add(new Label("Cost (enter number only):"), 0, 3); // Clarified label
         grid.add(costField, 1, 3);
         grid.add(new Label("Type:"), 0, 4);
         grid.add(typeBox, 1, 4);
@@ -279,36 +254,29 @@ public class Commons {
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == saveButtonType) {
                 String date = dateField.getText();
-                String cost = costField.getText();
+                String costStr = costField.getText().trim(); // Numeric part of cost
 
-                // Validate the date format
                 if (!isValidDate(date)) {
                     showErrorDialog("Format error: Invalid date format. Please use yyyy-MM-dd HH:mm.");
-                    return null;  // Keep the dialog open
+                    return null;
                 }
 
-                // Validate the cost format
-                if (!isValidCost(cost)) {
-                    showErrorDialog("Format error: Invalid cost format. Please enter a valid number followed by 'RMB'.");
-                    return null;  // Keep the dialog open
+                if (!isValidCost(costStr)) { // Validate the numeric part
+                    showErrorDialog("Format error: Invalid cost format. Please enter a valid number for cost.");
+                    return null;
                 }
 
-                // Add " RMB" to the cost if it's not present
-                if (!cost.endsWith("RMB")) {
-                    cost = cost + " RMB";
-                }
+                String finalCost = costStr.isEmpty() ? "0 RMB" : costStr + " RMB"; // Append RMB
 
-                // Get the selected type from the radio buttons
                 RadioButton selectedRadioButton = (RadioButton) typeGroup.getSelectedToggle();
-                String type = selectedRadioButton.getText();  // Fix: Getting the text of the selected RadioButton
+                String type = selectedRadioButton != null ? selectedRadioButton.getText() : "Others"; // Default if somehow none selected
 
-                // Create a new Bill using the fields
                 return new Bill(
                         date,
                         nameField.getText(),
                         detailsField.getText(),
-                        cost,
-                        type  // This is now properly set to the selected type
+                        finalCost,
+                        type
                 );
             }
             return null;
@@ -316,74 +284,54 @@ public class Commons {
 
         Optional<Bill> result = dialog.showAndWait();
 
-        result.ifPresent(edited -> {
+        result.ifPresent(newBill -> { // Changed variable name
             ObservableList<Bill> bills = table.getItems();
-            bills.add(edited);
-            table.setItems(bills);
-            updateTotalCost(table.getItems(), totalCost);
+            bills.add(newBill);
+            // table.setItems(bills); // Not necessary if bills is obtained from getItems() and modified
+            updateTotalCost(bills, totalCost);
             table.refresh();
         });
     }
 
-    /**
-     * Applies consistent styling to radio buttons.
-     *
-     * @param radioButton The radio button to style
-     */
     private void styleRadioButton(RadioButton radioButton) {
         radioButton.setStyle("-fx-background-color: #ecf0f1; -fx-border-color: #bdc3c7; -fx-padding: 5;");
     }
 
-    /**
-     * Sets a uniform width for radio buttons.
-     *
-     * @param radioButton The radio button to resize
-     */
     private void setRadioButtonWidth(RadioButton radioButton) {
-        radioButton.setMinWidth(120);  // Set a fixed width for each button
+        radioButton.setMinWidth(120);
     }
 
-    /**
-     * Validates a date string against the expected format.
-     *
-     * @param date The date string to validate
-     * @return true if valid, false otherwise
-     */
-    private boolean isValidDate(String date) {
+    // Make public for testing
+    public boolean isValidDate(String date) {
+        if (date == null || date.trim().isEmpty()) {
+            return false;
+        }
         try {
-            LocalDateTime.parse(date, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+            LocalDateTime.parse(date.trim(), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
             return true;
         } catch (Exception e) {
             return false;
         }
     }
 
-    /**
-     * Validates a cost string is a valid number.
-     *
-     * @param cost The cost string to validate
-     * @return true if valid, false otherwise
-     */
-    private boolean isValidCost(String cost) {
+    // Make public for testing
+    public boolean isValidCost(String cost) {
+        if (cost == null || cost.trim().isEmpty()) {
+            return false; // Or treat empty as 0, depending on requirements
+        }
         try {
-            // Try parsing the cost as a valid number (double)
-            Double.parseDouble(cost);
+            Double.parseDouble(cost.trim());
             return true;
         } catch (NumberFormatException e) {
             return false;
         }
     }
 
-    /**
-     * Displays an error dialog with the specified message.
-     *
-     * @param message The error message to display
-     */
     private void showErrorDialog(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle("Error");
         alert.setHeaderText(null);
         alert.setContentText(message);
-        alert.showAndWait();  // Display error and keep the dialog open for correction
+        alert.showAndWait();
     }
 }

@@ -34,17 +34,6 @@ class BillUtilsTest {
 
         // Verify some content (basic check)
         List<String> lines = Files.readAllLines(csvFile.toPath());
-        // Expected: Header (implicitly written by StatefulBeanToCsv if not configured otherwise, or just data if it uses position)
-        // Opencsv's StatefulBeanToCsv writes beans directly, so there's no automatic "NAME" header as in the import logic.
-        // The provided importFromCSV skips a line if strings[0] is "NAME".
-        // This implies the CSV might have a header. Let's assume the export doesn't write a header for this test,
-        // or adjust if StatefulBeanToCsv default behavior implies headers.
-        // For simplicity, let's check the number of data lines.
-        // The provided exportToCSV doesn't explicitly write a header.
-        // The provided importFromCSV has a specific check: if ("NAME".equals(strings[0])) { continue; }
-        // This suggests that the CSV files it expects to import might have a header like "NAME,..."
-        // However, the Bill class uses @CsvBindByPosition, which typically doesn't involve named headers for writing unless specified.
-        // Let's assume for now `exportToCSV` writes data directly.
 
         assertEquals(2, lines.size(), "CSV file should contain 2 data lines (if no header from export)");
 
@@ -74,27 +63,13 @@ class BillUtilsTest {
 
         List<Bill> importedBills = BillUtils.importFromCSV(csvFileWithHeader);
         assertNotNull(importedBills);
-        // The current import logic specifically checks `if ("NAME".equals(strings[0]))`.
-        // If the first field of the header is "NAME", it will be skipped.
-        // So, if the header is "NAME,DATE...", it will be skipped.
-        // The data line provided "Coffee" is the first field.
-        // The Bill constructor expects: date, name, details, cost, type.
-        // The sample data line is: name, date, details, cost, type. This order is different from Bill constructor.
-        // The Bill class uses @CsvBindByPosition for export.
-        // The Bill(String[] strings) constructor uses strings[0] as date, strings[1] as name etc.
-        // The CSV data for import must match this order.
 
-        // Let's re-create the CSV content to match the Bill(String[] strings) constructor order
-        // And ensure the header starts with "NAME" to test the skip.
         csvContent = Arrays.asList(
                 "DATE,NAME,DETAILS,COST,TYPE", // This header will NOT be skipped by `if ("NAME".equals(strings[0]))`
                 "\"2025-01-03 09:00\",\"Coffee\",\"Cafe\",\"25 RMB\",\"Food\""
         );
         Files.write(csvFileWithHeader.toPath(), csvContent);
         importedBills = BillUtils.importFromCSV(csvFileWithHeader);
-        // Since the header's first element "DATE" is not "NAME", the header itself will be parsed as a bill, likely causing an error or an incorrect bill.
-        // This shows a potential fragility in the header skipping logic.
-        // To correctly test the skip, the header MUST start with "NAME".
 
         // Corrected CSV for testing the "NAME" header skip
         List<String> csvContentCorrected = Arrays.asList(

@@ -64,10 +64,13 @@ public class Main extends Application {
         // Create main content pages
         VBox detailsPage = getDetailsPage(primaryStage);
         VBox analysisPage = getAnalysisPage();
+        VBox userManualPage = getUserManualPage();
+
 
         // Navigation buttons
         Button btnDetails = new Button("Details");
         Button btnAnalysis = new Button("Analysis");
+        Button btnManual = new Button("User Manual");
 
         // Shadow effect for button highlighting
         DropShadow shadow = new DropShadow();
@@ -79,22 +82,21 @@ public class Main extends Application {
         // Style navigation buttons
         btnDetails.setStyle("-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-size: 16px; -fx-border-radius: 5px; -fx-padding: 10px;");
         btnAnalysis.setStyle("-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-font-size: 16px; -fx-border-radius: 5px; -fx-padding: 10px;");
+        btnManual.setStyle("-fx-background-color: #e67e22; -fx-text-fill: white; -fx-font-size: 16px; -fx-border-radius: 5px; -fx-padding: 10px;");
         btnDetails.setEffect(shadow); // Highlight default page
 
         // Functional buttons
         Button uploadBtn = commons.createImportButton(table, totalCostLabel, primaryStage);
         Button downloadBtn = commons.createExportButton(table, totalCostLabel, primaryStage);
-        Button analyzeBtn = new Button("AI Type Analysis");
         Button addBtn = new Button("Add Bill");
 
         // Style them
         commons.styleButton1(uploadBtn);
         commons.styleButton2(downloadBtn);
-        commons.styleButton3(analyzeBtn);
         commons.styleButton2(addBtn);
 
         // Button bar
-        HBox bar = new HBox(10, btnDetails, btnAnalysis);
+        HBox bar = new HBox(10, btnDetails, btnAnalysis,btnManual);
         bar.setPadding(new Insets(10));
         bar.setAlignment(Pos.CENTER);
         bar.setStyle("-fx-background-color: #eeeeee;");
@@ -102,21 +104,38 @@ public class Main extends Application {
         // Switchable content pane
         StackPane contentPane = new StackPane(detailsPage, analysisPage);
         analysisPage.setVisible(false); // Show only details page by default
+        contentPane.getChildren().add(userManualPage);
+        userManualPage.setVisible(false);
 
         // Switch to details page
         btnDetails.setOnAction(e -> {
             detailsPage.setVisible(true);
             analysisPage.setVisible(false);
+            userManualPage.setVisible(false);
             btnDetails.setEffect(shadow);
             btnAnalysis.setEffect(null);
+            btnManual.setEffect(null);
         });
 
         // Switch to analysis page
         btnAnalysis.setOnAction(e -> {
             detailsPage.setVisible(false);
             analysisPage.setVisible(true);
+            userManualPage.setVisible(false);
             btnDetails.setEffect(null);
             btnAnalysis.setEffect(shadow);
+            btnManual.setEffect(null);
+        });
+
+        // Switch to Manual Page
+        btnManual.setOnAction(e -> {
+            detailsPage.setVisible(false);
+            analysisPage.setVisible(false);
+            userManualPage.setVisible(true);
+            btnDetails.setEffect(null);
+            btnAnalysis.setEffect(null);
+            btnManual.setEffect(shadow);
+
         });
 
         // Keep shadow effect on button release
@@ -126,6 +145,9 @@ public class Main extends Application {
 
         btnAnalysis.setOnMouseReleased(e -> {
             btnAnalysis.setEffect(analysisPage.isVisible() ? shadow : null);
+        });
+        btnManual.setOnMouseReleased(e -> {
+            btnManual.setEffect(userManualPage.isVisible() ? shadow : null);
         });
 
         VBox root = new VBox(header, bar, contentPane);
@@ -172,18 +194,16 @@ public class Main extends Application {
 
         Button uploadBtn = commons.createImportButton(table, totalCostLabel, primaryStage);
         Button downloadBtn = commons.createExportButton(table, totalCostLabel, primaryStage);
-        Button analyzeBtn = new Button("AI Type Analysis");
         Button addBtn = new Button("Add Bill");
 
         addBtn.setOnAction(e -> commons.showAddDialog(table, totalCostLabel));
 
         commons.styleButton1(uploadBtn);
         commons.styleButton2(downloadBtn);
-        commons.styleButton3(analyzeBtn);
         commons.styleButton2(addBtn);
 
         totalCostLabel.setFont(Font.font(14));
-        topButtons.getChildren().addAll(uploadBtn, downloadBtn, addBtn, analyzeBtn, totalCostLabel);
+        topButtons.getChildren().addAll(uploadBtn, downloadBtn, addBtn, totalCostLabel);
 
         // Setup table
         table.setStyle("-fx-background-color: white; -fx-border-color: #bdc3c7;");
@@ -285,4 +305,45 @@ public class Main extends Application {
 
         return analysisPageLayout;
     }
+
+    /**
+     * Builds the user manual page.
+     *
+     * @return a VBox containing the user manual content
+     */
+    private VBox getUserManualPage() {
+        Label title = new Label("User Manual");
+        title.setFont(Font.font("Arial", 20));
+        title.setStyle("-fx-font-weight: bold;");
+        title.setTextFill(Color.BLACK);
+
+        // User manual content
+        Label content = new Label("""
+        Welcome to the Bills Manager application!
+        
+        Features:
+        - Details Page: View, add, edit, and manage your bills.
+        - Analysis Page: Analyze your expenses using charts.
+        - User Manual: Get started and learn how to use the application.
+        
+        How to Use:
+        1. Add a Bill: Click 'Add Bill' to input a new bill entry.
+        2. Import/Export: Use the upload/download buttons to manage data files.
+        3. AI Type Analysis: Analyze bill types using advanced algorithms.
+        4. Edit Bills: Use the 'Edit' button in the Details page.
+        
+        For support, contact:  support@billsmanager.com
+        """);
+        content.setWrapText(true);
+        content.setFont(Font.font("Arial", 14));
+        content.setTextFill(Color.DARKBLUE);
+
+        VBox manualPage = new VBox(20, title, content);
+        manualPage.setPadding(new Insets(20));
+        manualPage.setStyle("-fx-background-color: #f9f9f9;");
+        manualPage.setAlignment(Pos.TOP_LEFT);
+
+        return manualPage;
+    }
+
 }
